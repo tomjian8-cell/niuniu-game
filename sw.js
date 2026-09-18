@@ -1,5 +1,5 @@
 // 离线缓存：第一次打开后，游戏就存在设备上，断网也能玩
-const CACHE = 'niuniu-v3';
+const CACHE = 'niuniu-v4';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-180.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
@@ -9,11 +9,23 @@ self.addEventListener('activate', e => {
 });
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  const isPage = e.request.mode === 'navigate' || /index\.html$|\/$/.test(new URL(e.request.url).pathname);
+  if (isPage) {
+    // 页面：有网时拿最新版（这样以后更新会自动生效），没网时用缓存
+    e.respondWith(
+      fetch(e.request).then(res => {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put('./index.html', copy)).catch(() => {});
+        return res;
+      }).catch(() => caches.match('./index.html', {ignoreSearch: true}).then(h => h || caches.match('./')))
+    );
+    return;
+  }
   e.respondWith(
     caches.match(e.request, {ignoreSearch: true}).then(hit => hit || fetch(e.request).then(res => {
       const copy = res.clone();
       caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
       return res;
-    }).catch(() => caches.match('./index.html')))
+    }))
   );
 });

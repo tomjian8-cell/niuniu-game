@@ -184,6 +184,18 @@ button:focus-visible{outline:2px solid var(--gold2);outline-offset:2px}
   .hpbar{width:34vw}
   .hud-tr .tbtn{padding:5px 8px;font-size:14px}
 }
+@media (min-width:760px) and (min-height:560px){
+  #bAtk{width:112px;height:112px;font-size:28px;right:calc(26px + env(safe-area-inset-right,0px));bottom:calc(28px + env(safe-area-inset-bottom,0px))}
+  #bSkill{width:82px;height:82px;font-size:15px;right:calc(150px + env(safe-area-inset-right,0px));bottom:calc(26px + env(safe-area-inset-bottom,0px))}
+  #bPot{width:66px;height:66px;font-size:15px;right:calc(142px + env(safe-area-inset-right,0px));bottom:calc(124px + env(safe-area-inset-bottom,0px))}
+  #bAuto{width:58px;height:58px;font-size:15px;right:calc(52px + env(safe-area-inset-right,0px));bottom:calc(156px + env(safe-area-inset-bottom,0px))}
+  .hpbar{width:min(280px,32vw);height:22px}
+  .hpbar b{font-size:13px}
+  .hud-tl .face{width:60px;height:60px}
+  .hud-chips .chip{font-size:13px}
+  #lvName{font-size:24px}
+  .tbtn{font-size:17px;padding:8px 14px}
+}
 @media (max-height:420px){
   .lv{min-height:104px}
   .logo{font-size:clamp(34px,11vh,66px)}
@@ -755,9 +767,48 @@ let VW=0,VH=0,DPR=1,ZOOM=1;
 function resize(){
   DPR=Math.min(2,window.devicePixelRatio||1);VW=window.innerWidth;VH=window.innerHeight;
   cv.width=Math.round(VW*DPR);cv.height=Math.round(VH*DPR);
-  ZOOM=clamp(Math.min(VW,VH)/400,.72,1.55);
+  // 视野：手机、平板都保证能看到主角周围一大片（平板不会过度放大）
+  ZOOM=clamp(Math.min(VW,VH)/430,.75,1.32);
 }
-window.addEventListener('resize',resize);resize();
+window.addEventListener('resize',resize);
+window.addEventListener('orientationchange',()=>setTimeout(resize,250));
+resize();
+
+/* ---------- 锁死浏览器缩放（iPad/iPhone 双指、双击会把画面放大且缩不回来）---------- */
+(function lockViewport(){
+  const meta=document.querySelector('meta[name="viewport"]');
+  const LOCK='width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover';
+  if(meta)meta.setAttribute('content',LOCK);
+  // 双指缩放
+  ['gesturestart','gesturechange','gestureend'].forEach(ev=>
+    document.addEventListener(ev,e=>{e.preventDefault();resetZoom();},{passive:false}));
+  // 双击缩放
+  let lastTap=0;
+  document.addEventListener('touchend',e=>{
+    const now=Date.now();
+    if(now-lastTap<400)e.preventDefault();
+    lastTap=now;
+  },{passive:false});
+  document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});
+  // 多指触摸不当成滑动
+  document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault();},{passive:false});
+  function resetZoom(){
+    if(!meta)return;
+    meta.setAttribute('content',LOCK+',_r='+Date.now());
+    setTimeout(()=>meta.setAttribute('content',LOCK),50);
+    window.scrollTo(0,0);
+  }
+  // 万一还是被放大了：自动缩回去并把画面拉正
+  const vv=window.visualViewport;
+  if(vv){
+    const check=()=>{
+      if(vv.scale>1.02)resetZoom();
+      if(vv.offsetLeft>1||vv.offsetTop>1||window.scrollX||window.scrollY)window.scrollTo(0,0);
+    };
+    vv.addEventListener('resize',check);vv.addEventListener('scroll',check);
+    setInterval(check,1500);
+  }
+})();
 
 /* ================= 战斗状态 ================= */
 let G=null,screen='title',paused=false;
@@ -1126,8 +1177,8 @@ let camX=0,camY=0;
 function drawGame(t){
   const c=ctx,p=G.p;
   const vw=VW/ZOOM,vh=VH/ZOOM;
-  camX=clamp(p.x-vw/2,-40,W-vw+40);camY=clamp(p.y-vh/2,-40,H-vh+40);
-  if(vw>W)camX=(W-vw)/2;if(vh>H)camY=(H-vh)/2;
+  camX=vw>=W?(W-vw)/2:clamp(p.x-vw/2,0,W-vw);
+  camY=vh>=H?(H-vh)/2:clamp(p.y-vh/2,0,H-vh);
   c.fillStyle='#05060C';c.fillRect(0,0,VW,VH);
   c.save();
   const sh=G.shake>0?G.shake*14:0;
@@ -1179,6 +1230,10 @@ function drawGame(t){
         c.strokeText(m.name,m.x,y);c.fillStyle=m.type==='b'?'#FF6A5E':'#FFC06A';c.fillText(m.name,m.x,y);}
     }else{
       if(p.shield>0){c.fillStyle=`rgba(180,160,255,${.25+Math.sin(t*10)*.08})`;circ(c,p.x,p.y-10,32);c.strokeStyle='rgba(255,240,170,.8)';c.lineWidth=2;c.beginPath();c.arc(p.x,p.y-10,32,0,Math.PI*2);c.stroke();}
+      const pulse=.5+Math.sin(t*3)*.12;
+      c.strokeStyle=`rgba(255,214,122,${pulse})`;c.lineWidth=2.5;
+      c.beginPath();c.ellipse(p.x,p.y+14,22,8,0,0,Math.PI*2);c.stroke();
+      c.fillStyle=`rgba(255,214,122,${pulse*.18})`;c.beginPath();c.ellipse(p.x,p.y+14,22,8,0,0,Math.PI*2);c.fill();
       if(p.hurt>0)c.globalAlpha=.55+Math.sin(t*60)*.3;
       drawHero(c,S.hero,p.x,p.y,p.face,p.moving?p.walk:0,p.swing,1,t);
       c.globalAlpha=1;
