@@ -1,0 +1,16 @@
+{
+  "name": "牛牛勇者大挑战",
+  "short_name": "牛牛勇者",
+  "description": "朱灵晔设计的十关打怪闯关游戏",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0E1222",
+  "theme_color": "#0E1222",
+  "lang": "zh-CN",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}
+  ]
+}
