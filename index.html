@@ -130,6 +130,28 @@ button:focus-visible{outline:2px solid var(--gold2);outline-offset:2px}
 #bAuto.on{background:radial-gradient(circle at 40% 35%,#6FE3AE,#1F8A5A);color:#fff}
 .joyhint{position:absolute;left:calc(22px + env(safe-area-inset-left,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));font-size:12px;color:rgba(242,230,204,.5)}
 
+/* 技能就绪发光 */
+#bSkill.ready{animation:skillGlow 1.2s ease-in-out infinite}
+@keyframes skillGlow{0%,100%{box-shadow:0 0 0 2px rgba(255,255,255,.35) inset,0 0 0 0 rgba(255,210,122,.0),0 4px 10px #0008}
+  50%{box-shadow:0 0 0 2px rgba(255,255,255,.6) inset,0 0 0 8px rgba(255,210,122,.35),0 4px 10px #0008}}
+/* 新手引导 */
+.tut{position:absolute;pointer-events:none;z-index:5}
+.tut-text{background:rgba(10,12,24,.86);color:var(--parch);font-size:17px;line-height:1.5;padding:10px 16px;border-radius:14px;
+  box-shadow:0 0 0 2px var(--gold) inset,0 8px 24px #0009;text-align:center;white-space:nowrap}
+.tut-text b{color:var(--gold2)}
+.tut.step1{left:calc(40px + env(safe-area-inset-left,0px));bottom:calc(60px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:flex-start;gap:14px}
+.tut.step1 .tut-hand{position:relative;width:180px;height:70px}
+.tut.step1 .tut-hand i{position:absolute;left:10px;top:12px;width:46px;height:46px;border-radius:50%;background:rgba(255,220,150,.75);
+  box-shadow:0 0 0 8px rgba(255,220,150,.25);animation:tutDrag 1.6s ease-in-out infinite}
+@keyframes tutDrag{0%{transform:translateX(0);opacity:0}15%{opacity:1}70%{transform:translateX(110px);opacity:1}100%{transform:translateX(120px);opacity:0}}
+.tut.step2{right:calc(40px + env(safe-area-inset-right,0px));bottom:calc(250px + env(safe-area-inset-bottom,0px))}
+.tut.step2 .tut-hand{display:none}
+.tut-ring{position:fixed;border-radius:50%;border:4px solid var(--gold2);pointer-events:none;z-index:5;animation:tutRing 1.1s ease-out infinite}
+@keyframes tutRing{0%{transform:scale(.85);opacity:1}100%{transform:scale(1.35);opacity:0}}
+.tut.step3{left:50%;top:26%;transform:translateX(-50%)}
+.tut.step3 .tut-hand{display:none}
+.lv .weak{font-size:11px;color:#FF9A8E;background:rgba(224,68,60,.16);border-radius:6px;padding:1px 6px;margin-top:2px;align-self:flex-start}
+
 /* 弹层 */
 #modal{position:absolute;inset:0;background:rgba(5,7,15,.72);display:flex;align-items:center;justify-content:center;
   padding:calc(10px + env(safe-area-inset-top,0px)) calc(12px + env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) calc(12px + env(safe-area-inset-left,0px));z-index:10}
@@ -217,6 +239,9 @@ button:focus-visible{outline:2px solid var(--gold2);outline-offset:2px}
   .big-title{font-size:22px}
   .statgrid{gap:6px}.sg{padding:4px 6px}.sg b{font-size:16px}.sg span{font-size:11px}
   .sheet-body.center .note{display:none}
+  .tut-text{font-size:14px;padding:8px 12px}
+  .tut.step2{bottom:calc(180px + env(safe-area-inset-bottom,0px))}
+  .tut.step1{bottom:calc(36px + env(safe-area-inset-bottom,0px))}
 }
 @media (max-height:420px){
   .lv{min-height:104px}
@@ -280,6 +305,8 @@ button:focus-visible{outline:2px solid var(--gold2);outline-offset:2px}
       <button class="tbtn" id="btnMenu">菜单</button>
     </div>
     <div class="joyhint" id="joyHint">按住左侧屏幕 移动</div>
+    <div id="tutRing" class="tut-ring" hidden></div>
+    <div id="tut" class="tut" hidden><div class="tut-hand"><i></i></div><div class="tut-text" id="tutText"></div></div>
     <button class="cbtn" id="bAuto">自动</button>
     <button class="cbtn" id="bPot">药水<b id="potN">3</b></button>
     <button class="cbtn" id="bSkill"><i id="skCd"></i><span id="skName">技能</span><em id="skCdN"></em></button>
@@ -923,6 +950,7 @@ function startLevel(L){
   refreshHudStatic();
   showScreen('game');
   if(VH>VW)toast('横过来玩更爽哦');
+  tutBegin();
 }
 
 function mkMon(type,x,y,summon){
@@ -939,6 +967,7 @@ function mkMon(type,x,y,summon){
 }
 
 /* ================= 输入 ================= */
+const JOY_R=()=>clamp(Math.min(VW,VH)*.1,56,92);
 const inp={keys:new Set(),atk:false,skill:false,joy:{id:null,bx:0,by:0,dx:0,dy:0}};
 const atkPointers=new Set();
 cv.addEventListener('pointerdown',e=>{
@@ -950,7 +979,7 @@ cv.addEventListener('pointerdown',e=>{
 });
 cv.addEventListener('pointermove',e=>{
   const j=inp.joy;if(e.pointerId!==j.id)return;
-  let dx=e.clientX-j.bx,dy=e.clientY-j.by;const d=hyp(dx,dy),M=56;
+  let dx=e.clientX-j.bx,dy=e.clientY-j.by;const d=hyp(dx,dy),M=JOY_R();
   if(d>M){dx=dx/d*M;dy=dy/d*M;}
   j.dx=dx/M;j.dy=dy/M;
 });
@@ -1107,7 +1136,8 @@ function bossSkill(m){
   const L=G.L,list=['slam'];if(L>=3)list.push('volley');if(L>=6)list.push('summon');
   const k=list[m.skn%list.length];m.skn++;
   if(k==='slam'){
-    const r=150+L*5;G.tele.push({x:m.x,y:m.y,r,t:0,dur:.95,dmg:m.atk*1.6,src:m});m.cast=.95;
+    const r=150+L*5;G.tele.push({x:m.x,y:m.y,r,t:0,dur:1.05,dmg:m.atk*1.6,src:m});m.cast=1.05;
+    if(hyp(G.p.x-m.x,G.p.y-m.y)<r+80)text(G.p.x,G.p.y-70,'红圈！快游出去！','#FF6A5E',true);
   }else if(k==='volley'){
     m.cast=.6;m.volleyT=.5;
   }else{
@@ -1144,6 +1174,7 @@ function update(dt){
     if(inp.atk||inp.tap||atkPointers.size){if(tryAttack())inp.tap=false;}
     else if(S.auto){const t=nearestMon(p.x,p.y,h.ranged?h.range*.9:h.range+4);if(t)tryAttack();}
     if(inp.skill){trySkill();inp.skill=false;}
+    if(S.auto&&p.hp<G.st.maxHp*.3&&S.potions>0&&G.t-(G.autoPotT||-9)>3){G.autoPotT=G.t;usePotion();}
     // 自然回血 1%/秒；安全营地 12%/秒
     const regen=hyp(p.x-180,p.y-H/2)<110?.12:.01;
     if(p.hp<G.st.maxHp)p.hp=Math.min(G.st.maxHp,p.hp+G.st.maxHp*regen*dt);
@@ -1202,10 +1233,29 @@ function update(dt){
   G.eproj=G.eproj.filter(b=>b.life>0);
   // 掉落拾取
   for(const d of G.drops){d.t+=dt;
-    if(d.t>.5&&!G.dead&&hyp(p.x-d.x,p.y-d.y)<46){
-      if(S.bag.length>=BAG_MAX){if(G.t-G.bagWarn>2){G.bagWarn=G.t;toast('背包满了！打开背包卖掉一些');}continue;}
-      d.it.id=S.uid++;S.bag.push(d.it);d.got=true;G.gainItems++;
-      text(d.x,d.y-20,d.it.name,RAR[d.it.rar].c,d.it.rar>=3);sfx(d.it.rar>=3?'rare':'pick');save();
+    if(d.t>.5&&!G.dead&&hyp(p.x-d.x,p.y-d.y)<58){
+      const it=d.it,cur=S.equip[it.slot];
+      it.id=S.uid++;
+      if(itemVal(it)>itemVal(cur)){
+        // 比身上的好：直接穿上，旧的放回背包（背包满就自动卖掉）
+        S.equip[it.slot]=it;
+        if(cur){if(S.bag.length<BAG_MAX)S.bag.push(cur);else S.gold+=sellPrice(cur);}
+        G.st=calcStats();
+        text(p.x,p.y-58,`穿上${it.name}  ${it.atk?'攻':'防'}+${itemVal(it)-itemVal(cur)}`,'#7CFFB2',true);
+        ring(p.x,p.y-10,20,70,'rgba(120,255,180,',.45,6);
+      }else{
+        if(S.bag.length>=BAG_MAX){
+          // 背包满：自动卖掉最差的一件（包括刚捡的这件）
+          let wi=-1,wv=itemVal(it)*10+it.rar*1000;
+          S.bag.forEach((b,i)=>{const v=itemVal(b)*10+b.rar*1000;if(v<wv){wv=v;wi=i;}});
+          const sold=wi>=0?S.bag.splice(wi,1)[0]:it;
+          S.gold+=sellPrice(sold);
+          if(G.t-G.bagWarn>2){G.bagWarn=G.t;toast(`背包满了，自动卖掉${sold.name} +${sellPrice(sold)}金币`);}
+          if(sold!==it)S.bag.push(it);
+        }else S.bag.push(it);
+      }
+      d.got=true;G.gainItems++;
+      text(d.x,d.y-20,it.name,RAR[it.rar].c,it.rar>=3);sfx(it.rar>=3?'rare':'pick');save();
     }}
   G.drops=G.drops.filter(d=>!d.got);
   // 特效
@@ -1353,12 +1403,41 @@ function drawGame(t){
   // 受伤红边
   if(p.hurt>0){const g=c.createRadialGradient(VW/2,VH/2,Math.min(VW,VH)*.35,VW/2,VH/2,Math.max(VW,VH)*.7);g.addColorStop(0,'rgba(255,0,0,0)');g.addColorStop(1,`rgba(255,0,0,${p.hurt*1.2})`);c.fillStyle=g;c.fillRect(0,0,VW,VH);}
   drawMinimap();
+  drawGuideArrow(t);
   // 摇杆
   const j=inp.joy;
   if(j.id!==null){
-    c.fillStyle='rgba(255,255,255,.08)';circ(c,j.bx,j.by,56);
-    c.strokeStyle='rgba(255,230,180,.35)';c.lineWidth=2;c.beginPath();c.arc(j.bx,j.by,56,0,Math.PI*2);c.stroke();
-    c.fillStyle='rgba(255,220,150,.55)';circ(c,j.bx+j.dx*56,j.by+j.dy*56,24);
+    const JR=JOY_R();c.fillStyle='rgba(255,255,255,.08)';circ(c,j.bx,j.by,JR);
+    c.strokeStyle='rgba(255,230,180,.35)';c.lineWidth=2;c.beginPath();c.arc(j.bx,j.by,JR,0,Math.PI*2);c.stroke();
+    c.fillStyle='rgba(255,220,150,.55)';circ(c,j.bx+j.dx*JR,j.by+j.dy*JR,JR*.43);
+  }
+}
+function guideTarget(){
+  const p=G.p,b=G.boss;
+  if(G.cleared||G.dead)return null;
+  const rest=G.mons.filter(m=>!m.dead&&m.type!=='b');
+  if(!b.dead&&(rest.length===0||b.state==='chase'||G.kills>=Math.max(6,G.mons.length*.6)))return b;
+  let best=null,bd=1e9;for(const m of rest){const d=hyp(m.x-p.x,m.y-p.y);if(d<bd){bd=d;best=m;}}
+  return best||(!b.dead?b:null);
+}
+function drawGuideArrow(t){
+  const m=guideTarget();if(!m)return;
+  const sx=(m.x-camX)*ZOOM,sy=(m.y-camY)*ZOOM,pad=60;
+  if(sx>pad&&sx<VW-pad&&sy>pad+40&&sy<VH-pad)return;          // 目标在屏幕里就不画
+  const px=(G.p.x-camX)*ZOOM,py=(G.p.y-10-camY)*ZOOM;
+  const a=Math.atan2(sy-py,sx-px),boss=m.type==='b';
+  // 箭头绕着主角转，离鱼不远，小朋友一眼就能看到
+  const R=clamp(Math.min(VW,VH)*.2,90,150)+Math.sin(t*6)*6;
+  const ax=px+Math.cos(a)*R,ay=py+Math.sin(a)*R*.8;
+  const c=ctx,s=boss?1.3:1;
+  c.save();c.translate(ax,ay);c.rotate(a);
+  c.fillStyle=boss?'rgba(255,70,70,.95)':'rgba(255,214,122,.95)';c.strokeStyle='rgba(0,0,0,.55)';c.lineWidth=2;
+  c.beginPath();c.moveTo(22*s,0);c.lineTo(-10*s,-15*s);c.lineTo(-4*s,0);c.lineTo(-10*s,15*s);c.closePath();c.fill();c.stroke();
+  c.restore();
+  if(boss){
+    c.font='900 14px "Noto Sans SC",sans-serif';c.textAlign='center';c.lineWidth=3.5;c.strokeStyle='#000c';
+    const lx=ax+Math.cos(a)*34,ly=ay+Math.sin(a)*26+5;
+    c.strokeText('BOSS',lx,ly);c.fillStyle='#FF8A80';c.fillText('BOSS',lx,ly);
   }
 }
 function drawMinimap(){
@@ -1419,6 +1498,7 @@ function renderMap(){
       <span class="nm">${lv.n}</span>
       <span class="mons">小怪 ${lv.s[0]}<br>中怪 ${lv.m[0]}<br>BOSS ${lv.b[0]}</span>
       <span class="rec">建议 攻${REC_ATK[i]} 防${REC_DEF[i]}</span>
+      ${!lock&&!ok&&(st.atk<REC_ATK[i]*.8||st.def<REC_DEF[i]*.8)?'<span class="weak">实力不够，先去商店「一键买齐」</span>':''}
       <span class="st ${lock?'lock':ok?'ok':'go'}">${lock?'未解锁':ok?'已通关':'可挑战'}</span>
     </button>`;}).join('');
 }
@@ -1451,6 +1531,8 @@ function refreshHud(){
   const h=heroDef(),k=p.scd/h.cd;
   $('skCd').style.setProperty('--p',(k*100)+'%');
   $('skCdN').textContent=p.scd>0?Math.ceil(p.scd):'';
+  $('bSkill').classList.toggle('ready',p.scd<=0&&!G.dead);
+  tutTick();
   $('potN').textContent=S.potions;
 }
 
@@ -1553,6 +1635,8 @@ function shopHtml(){
   h+=`<div class="detail"><span style="width:40px;height:40px;display:inline-block">${ICON.potion}</span>
     <div><div class="dn">恢复药水</div><div class="dm">立刻回复 35% 血量 · 持有 ${S.potions}/${POTION_MAX}</div></div>
     <div class="acts"><button class="btn sm" data-act="potion" ${S.points<POTION_PRICE||S.potions>=POTION_MAX?'disabled':''}>购买 ${POTION_PRICE} 积分</button></div></div>`;
+  h+=`<div class="detail"><div><div class="dn">一键买齐</div><div class="dm">自动买下能买得起的最好装备，并直接穿上</div></div>
+    <div class="acts"><button class="btn sm" data-act="buyBest">一键买齐</button></div></div>`;
   h+=`<div class="row"><h3>装备等级</h3>${Array.from({length:S.unlocked},(_,i)=>`<button class="tab ${shopLv===i+1?'act':''}" data-slv="${i+1}">Lv${i+1}</button>`).join('')}</div>`;
   h+=detailHtml();
   const items=[];
@@ -1667,6 +1751,21 @@ $('sheet').addEventListener('click',e=>{
       if(S.points<pr){toast('积分不够，去打怪吧');break;}
       if(S.bag.length>=BAG_MAX){toast('背包满了，先卖掉一些');break;}
       S.points-=pr;const n={...it,id:S.uid++};delete n.sk;S.bag.push(n);sfx('buy');toast(`买到了 ${n.name}，在背包里穿上它`);afterChange();break;}
+    case 'buyBest':{
+      let bought=[],spent=0;
+      for(let pass=0;pass<2;pass++)for(const k of SLOT_KEYS){
+        for(let r=2;r>=0;r--){
+          const it=makeItem(S.unlocked,r,k),pr=buyPrice(it);
+          if(itemVal(it)>itemVal(S.equip[k])&&S.points-pr>=0){
+            S.points-=pr;spent+=pr;it.id=S.uid++;
+            const old=S.equip[k];S.equip[k]=it;if(old){if(S.bag.length<BAG_MAX)S.bag.push(old);else S.gold+=sellPrice(old);}
+            bought.push(it.name);break;
+          }
+        }
+      }
+      if(bought.length){sfx('buy');toast(`买好并穿上了 ${bought.length} 件装备，花了 ${spent} 积分`);}
+      else toast(S.points<30?'积分不够，先去打怪吧':'身上已经是能买到的最好装备了');
+      afterChange();break;}
     case 'potion':
       if(S.points>=POTION_PRICE&&S.potions<POTION_MAX){S.points-=POTION_PRICE;S.potions++;sfx('buy');afterChange();}break;
     case 'buyHero':{
@@ -1688,6 +1787,34 @@ function afterChange(){
   if(G){const r=G.p.hp/G.st.maxHp;G.st=calcStats();G.p.hp=Math.min(G.st.maxHp,Math.max(1,G.p.hp));}
   renderModal();
 }
+
+/* ================= 新手引导（第一次进第 1 关） ================= */
+let tutStep=0,tutStart=null;
+function tutBegin(){
+  if(S.tutDone||!G||G.L!==1){$('tut').hidden=true;$('tutRing').hidden=true;return;}
+  tutStep=1;tutStart={x:G.p.x,y:G.p.y,kills:G.kills,t:G.t};tutShow();
+}
+function tutShow(){
+  const el=$('tut');el.hidden=false;el.className='tut step'+tutStep;
+  const ring=$('tutRing');
+  if(tutStep===2){const r=$('bAtk').getBoundingClientRect();ring.hidden=false;
+    Object.assign(ring.style,{left:(r.left-10)+'px',top:(r.top-10)+'px',width:(r.width+20)+'px',height:(r.height+20)+'px'});}
+  else ring.hidden=true;
+  $('tutText').innerHTML=tutStep===1?'按住这里<b>拖动</b><br>大马林鱼就会游起来':
+    tutStep===2?'游到<b>怪物</b>旁边会<b>自动攻击</b><br>也可以点「攻击」':
+    '打死怪物会<b>掉装备</b><br>游过去就能捡，更好的会<b>自动穿上</b>';
+}
+function tutTick(){
+  if(!tutStep||!G)return;
+  if(tutStep===1&&hyp(G.p.x-tutStart.x,G.p.y-tutStart.y)>140){tutStep=2;tutShow();}
+  else if(tutStep===2&&G.kills>tutStart.kills){tutStep=3;tutStart.t=G.t;tutShow();}
+  else if(tutStep===3&&G.t-tutStart.t>4.5){tutStep=0;$('tut').hidden=true;$('tutRing').hidden=true;S.tutDone=true;save();}
+}
+
+/* 切到后台（锁屏、切 App）自动暂停，免得回来已经被打死 */
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){save();if(screen==='game'&&G&&!G.dead&&!paused&&!G.cleared)openMenu();}
+});
 
 /* ================= 启动 ================= */
 window.__yz={get G(){return G;},get S(){return S;},startLevel,openPanel,showScreen,update:dt=>update(dt),makeItem,buyPrice,sellPrice,calcStats,HEROES,skill:()=>{inp.skill=true;},potion:()=>usePotion(),save,switchHero,exitToMap:()=>{G=null;paused=false;showScreen('map');}};
