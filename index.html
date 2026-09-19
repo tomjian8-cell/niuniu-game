@@ -152,6 +152,25 @@ button:focus-visible{outline:2px solid var(--gold2);outline-offset:2px}
 .tut.step3 .tut-hand{display:none}
 .lv .weak{font-size:11px;color:#FF9A8E;background:rgba(224,68,60,.16);border-radius:6px;padding:1px 6px;margin-top:2px;align-self:flex-start}
 
+/* 困难篇 */
+.sec{grid-column:1/-1;font-family:var(--disp);font-size:18px;color:var(--gold2);margin-top:4px}
+.sec.hard{color:#FF8A7A;margin-top:10px}.sec span{font-family:var(--body);font-size:12px;color:var(--muted);margin-left:8px}
+.lv.hardlv{background:linear-gradient(#2A1830,#1B2240);box-shadow:0 0 0 1px rgba(255,120,110,.25) inset}
+.lv.hardlv.next{box-shadow:0 0 0 2px #FF7A6E inset,0 0 18px rgba(255,110,100,.25)}
+.hinfo{font-size:11px;color:#FFB8A8;display:flex;align-items:center;gap:3px;flex-wrap:wrap;margin:1px 0 2px}
+.elb{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 3px;border-radius:9px;background:var(--ec);color:#1A1020;font-style:normal;font-weight:900;font-size:11px;font-family:var(--body)}
+#lvMech{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-top:3px}
+#lvMech .mk{font-size:11px;background:rgba(10,12,24,.7);padding:1px 7px;border-radius:99px}
+#lvMech .mk.bad{color:#FF8A7A}#lvMech .mk.ok{color:#7CFFB2}
+.brief{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.cfg{background:#11162B;border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.cfg .ok,.brief .ok{color:#7CFFB2}.cfg .bad{color:#FF8A7A}.cfg .mid{color:var(--muted)}
+.charms{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.charm{display:flex;align-items:center;gap:10px;background:#11162B;border-radius:12px;padding:8px 10px}
+.charm.on{box-shadow:0 0 0 2px var(--cc) inset}
+.charm .cdot{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff,var(--cc));flex:none;box-shadow:0 0 10px var(--cc)}
+.charm div{display:flex;flex-direction:column;flex:1;min-width:0}.charm b{font-size:14px}.charm span{font-size:11px;color:var(--muted)}
+
 /* 弹层 */
 #modal{position:absolute;inset:0;background:rgba(5,7,15,.72);display:flex;align-items:center;justify-content:center;
   padding:calc(10px + env(safe-area-inset-top,0px)) calc(12px + env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) calc(12px + env(safe-area-inset-left,0px));z-index:10}
@@ -257,7 +276,7 @@ button:focus-visible{outline:2px solid var(--gold2);outline-offset:2px}
   <canvas id="cv"></canvas>
 
   <section id="scr-title" class="screen">
-    <h1 class="logo">牛牛勇者大挑战<small>十关征途 · 屠魔爆装</small></h1>
+    <h1 class="logo">牛牛勇者大挑战<small>二十关征途 · 属性克制</small></h1>
     <p class="tagline">牛牛出击！打小怪 · 斩中怪 · 屠大BOSS · 吸收血量越战越强</p>
     <div class="title-btns">
       <button class="btn big" id="btnStart">开始冒险</button>
@@ -297,9 +316,11 @@ button:focus-visible{outline:2px solid var(--gold2);outline-offset:2px}
     <div class="hud-tc">
       <div id="lvName"></div>
       <div id="lvProg"></div>
+      <div id="lvMech" hidden></div>
       <div id="bossBar" hidden><div id="bossName"></div><div class="bb"><i id="bossFill"></i></div></div>
     </div>
     <div class="hud-tr">
+      <button class="tbtn" data-open="hero">形态</button>
       <button class="tbtn" data-open="bag">背包</button>
       <button class="tbtn" data-open="shop">商店</button>
       <button class="tbtn" id="btnMenu">菜单</button>
@@ -372,7 +393,7 @@ const HEROES=[
 /* ================= 存档 ================= */
 const KEY='yz10_save_v1';
 const freshSave=()=>({unlocked:1,cleared:{},points:0,gold:0,hpBonus:0,bag:[],
-  equip:{weapon:null,helm:null,armor:null,ring:null},heroes:['flame'],hero:'flame',potions:3,muted:false,auto:true,uid:1,kills:0});
+  equip:{weapon:null,helm:null,armor:null,ring:null},heroes:['flame'],hero:'flame',potions:3,muted:false,auto:true,uid:1,kills:0,charms:[],charm:null});
 function loadSave(){
   try{const t=localStorage.getItem(KEY);if(t){const o=JSON.parse(t);return Object.assign(freshSave(),o);}}catch(e){}
   return freshSave();
@@ -447,6 +468,77 @@ function sfx(k){
     }
   }catch(e){}
 }
+/* ================= 困难篇：第 11-20 关（要讲策略：属性克制 + 护符 + BOSS 机制） ================= */
+LEVELS.push(
+  {n:'熔火炼狱',mat:'熔火',g:'#4A1810',deco:'lava',prop:'rock',pc:'#6A2A1A',el:'火',mech:['burn'],
+    s:['熔岩蜥蜴','bug','#FF6A2E'],m:['火焰巨魔','golem','#D0461E'],b:['地狱火龙','dragon','#FF3A1E']},
+  {n:'极寒冰川',mat:'极寒',g:'#A9C6DC',deco:'snow',prop:'crystal',pc:'#9ED4F5',el:'冰',mech:['cold'],
+    s:['冰晶蝙蝠','bird','#BFE8FF'],m:['雪原猛犸','beast','#DDEBF5'],b:['冰霜女巫','ghost','#9EE6FF']},
+  {n:'钢铁要塞',mat:'精钢',g:'#4E5664',deco:'cloud',prop:'pillar',pc:'#9AA4B2',el:'金',mech:['armor'],
+    s:['齿轮兵','golem','#9AA4B2'],m:['钢铁卫士','humanoid','#7A8494'],b:['机械巨像','golem','#5A6474']},
+  {n:'幽魂迷雾',mat:'幽冥',g:'#22232E',deco:'grave',prop:'tomb',pc:'#5A5870',el:'暗',mech:['fog'],
+    s:['游魂','ghost','#9A8AE8'],m:['暗影狼','beast','#3A3050'],b:['冥界使者','ghost','#6A4AC8']},
+  {n:'毒龙巢穴',mat:'毒龙',g:'#26402E',deco:'swamp',prop:'deadtree',pc:'#3A3020',el:'龙',mech:['poison'],
+    s:['毒刺虫','bug','#7AC84A'],m:['沼泽龙人','humanoid','#3E8A4A'],b:['剧毒龙王','dragon','#4ABA3A']},
+  {n:'冰火两重天',mat:'冰火',g:'#3A2230',deco:'lava',prop:'crystal',pc:'#8FD0F0',el:'火',els:['火','冰'],mech:['burn','cold'],
+    s:['冰火精灵','slime','#FF8A5A'],m:['炎冰双头兽','beast','#C06AA0'],b:['冰火魔神','demon','#E0504A']},
+  {n:'雷霆机城',mat:'雷霆',g:'#46506A',deco:'cloud',prop:'pillar',pc:'#C8D2E0',el:'金',mech:['armor','crystal'],
+    s:['电子蜂','bird','#E8D24A'],m:['雷电机甲','golem','#6A7A9A'],b:['雷神机甲王','golem','#4A5A8A']},
+  {n:'暗影深渊',mat:'虚空',g:'#140F22',deco:'shadow',prop:'crystal',pc:'#7A3AD8',el:'暗',mech:['fog','poison','blink'],
+    s:['影蝠','bird','#5A3A8A'],m:['深渊骑士','skeleton','#8A6AC8'],b:['虚空之主','demon','#3A1A6A']},
+  {n:'龙王宝殿',mat:'龙王',g:'#301018',deco:'chaos',prop:'pillar',pc:'#C8A040',el:'龙',mech:['armor','heal'],
+    s:['龙鳞卫兵','humanoid','#B04A3A'],m:['金甲龙','dragon','#D0A040'],b:['远古龙王','dragon','#E0B040']},
+  {n:'终焉之海',mat:'深海',g:'#0E3A5E',deco:'sea',prop:'crystal',pc:'#58E0D0',el:'火',els:['火','冰','金','暗'],mech:['crystal','shift'],
+    s:['深海水母','ghost','#6AD8FF'],m:['巨钳蟹将','bug','#E0604A'],b:['深海魔神','dragon','#1A6AC8']},
+);
+// 数值：怪物血量仍然是 4/15/100（设计者规则），但护甲、攻击继续变强
+DEF_S.push(37,40,42,44,46,49,52,54,57,61);
+DEF_M.push(58,61,65,68,71,76,80,84,88,94);
+DEF_B.push(78,83,87,92,97,102,108,114,120,127);
+ATK_S.push(344,362,380,399,419,440,462,485,509,534);
+ATK_M.push(595,625,656,689,724,760,798,838,880,924);
+ATK_B.push(961,1009,1059,1112,1168,1226,1287,1352,1419,1490);
+REC_ATK.push(68,72,76,80,84,89,94,99,104,110);
+REC_DEF.push(58,62,66,70,74,78,82,86,90,94);
+const MAX_LV=LEVELS.length;   // 20
+
+/* ---------- 属性克制 ---------- */
+const HERO_EL={flame:'火',mech:'雷',frost:'冰',star:'光',dragon:'龙'};
+const EL_COL={火:'#FF7A3A',冰:'#7FD4FF',雷:'#FFE14A',光:'#FFF1A8',龙:'#E8B84A',暗:'#A98AFF',金:'#C3CCD8'};
+// 怪物属性：怕什么（伤害×1.5）、抗什么（伤害×0.5）
+const EL_RULE={火:{weak:'冰',resist:['火']},冰:{weak:'火',resist:['冰']},金:{weak:'雷',resist:['火','龙']},暗:{weak:'光',resist:['冰','龙']},龙:{weak:'龙',resist:['火']}};
+const EL_HERO=Object.fromEntries(Object.entries(HERO_EL).map(([k,v])=>[v,k]));
+function elemMult(heroEl,monEl){const r=monEl&&EL_RULE[monEl];if(!r)return 1;if(heroEl===r.weak)return 1.5;if(r.resist.includes(heroEl))return .5;return 1;}
+// 困难篇「霸体」：每一下最多打掉多少血（属性对了才打得快）
+function hitCap(type,em){if(type==='b')return em>1?10:em<1?2:4;if(type==='m')return em>1?8:em<1?2:3;if(type==='c')return em>1?6:3;return 1e9;}
+function heroNameOfEl(el){const id=EL_HERO[el];const h=HEROES.find(x=>x.id===id);return h?h.short:'';}
+
+/* ---------- 关卡难点 & 护符 ---------- */
+const MECH={
+  burn:{n:'灼烧',d:'地面很烫，每秒掉血',charm:'frost'},
+  cold:{n:'寒冷',d:'游得很慢',charm:'fire'},
+  armor:{n:'厚甲',d:'怪物护甲更厚',charm:'pierce'},
+  fog:{n:'黑雾',d:'只看得见身边一小圈',charm:'light'},
+  poison:{n:'中毒',d:'被打中会中毒，持续掉血',charm:'cure'},
+  crystal:{n:'水晶护盾',d:'BOSS 有护盾，要先打碎 3 个能量水晶'},
+  heal:{n:'治疗图腾',d:'BOSS 会放图腾给自己回血，要先打掉图腾'},
+  blink:{n:'瞬移',d:'BOSS 会突然闪到别处'},
+  shift:{n:'变换属性',d:'BOSS 每掉 25 血换一次属性，要跟着换形态'},
+};
+const CHARMS=[
+  {id:'frost', n:'冰霜护符',d:'免疫「灼烧」',       price:600, col:'#7FD4FF'},
+  {id:'fire',  n:'火焰护符',d:'免疫「寒冷」减速',   price:600, col:'#FF8A4A'},
+  {id:'pierce',n:'破甲护符',d:'攻击无视 35% 护甲', price:900, col:'#C8D2E0'},
+  {id:'light', n:'夜明护符',d:'驱散「黑雾」',       price:900, col:'#FFF1A8'},
+  {id:'cure',  n:'解毒护符',d:'免疫「中毒」',       price:900, col:'#7CE07A'},
+  {id:'vamp',  n:'吸血护符',d:'每次攻击回复 1.5% 血量',price:1500,col:'#FF5A7A'},
+];
+const charmDef=id=>CHARMS.find(c=>c.id===id);
+if(!Array.isArray(S.charms))S.charms=[];
+if(!('charm' in S))S.charm=null;
+function levelMechs(L){return (LEVELS[L-1]&&LEVELS[L-1].mech)||[];}
+function levelEls(L){const lv=LEVELS[L-1];return lv.els||(lv.el?[lv.el]:[]);}
+if(S.cleared&&S.cleared[10]&&S.unlocked<11)S.unlocked=11;
 /* ================= 绘制：英雄 ================= */
 function rr(c,x,y,w,h,r){c.beginPath();if(c.roundRect)c.roundRect(x,y,w,h,r);else c.rect(x,y,w,h);c.fill();}
 function circ(c,x,y,r){c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fill();}
@@ -698,6 +790,20 @@ function drawMon(c,m,t,face){
     c.strokeStyle='#FF9A2E';c.lineWidth=1.3;c.beginPath();c.moveTo(-2,7);c.lineTo(-3,13);c.moveTo(3,7);c.lineTo(3,13);c.stroke();
     if(m.name.includes('雷')){c.strokeStyle='#FFF6A0';c.lineWidth=1.3;c.beginPath();c.moveTo(-6,-10);c.lineTo(-3,-6);c.lineTo(-6,-5);c.lineTo(-2,0);c.stroke();}
     break;}
+  case 'crystalmon':{
+    const g=.6+Math.sin(a*4)*.25;
+    c.fillStyle=`rgba(120,235,255,${.25*g})`;circ(c,0,-6,22);
+    c.fillStyle=m.flash>0?'#fff':'#5FD8F5';poly(c,[0,-30,11,-6,0,14,-11,-6]);
+    c.fillStyle='rgba(255,255,255,.75)';poly(c,[0,-26,4,-8,0,4,-3,-8]);
+    c.fillStyle='#2A6A8A';rr(c,-13,12,26,6,2);
+    break;}
+  case 'totem':{
+    c.fillStyle=m.flash>0?'#fff':'#7A5230';rr(c,-6,-22,12,36,3);
+    c.fillStyle='#5A3A20';rr(c,-9,10,18,6,2);
+    c.fillStyle='#E8D2A0';rr(c,-5,-14,10,4,1);rr(c,-5,-6,10,4,1);
+    const g=.6+Math.sin(a*5)*.3;c.fillStyle=`rgba(124,224,122,${g})`;circ(c,0,-28,8);
+    c.fillStyle='rgba(124,224,122,.25)';circ(c,0,-28,14);
+    break;}
   }
   c.restore();
   if(m.frz>0){c.fillStyle='rgba(150,220,255,.35)';circ(c,m.x,m.y,m.r*1.05);c.strokeStyle='rgba(220,245,255,.8)';c.lineWidth=2;c.beginPath();c.arc(m.x,m.y,m.r*1.05,0,Math.PI*2);c.stroke();}
@@ -777,6 +883,8 @@ function renderGround(lv,W,H,seed){
     else if(d==='grave'){c.fillStyle='rgba(120,110,140,.15)';circ(c,x,y,R()*2.5);if(R()<.01){c.strokeStyle='rgba(230,225,210,.35)';c.lineWidth=2;c.beginPath();c.moveTo(x,y);c.lineTo(x+8,y+3);c.stroke();}}
     else if(d==='cloud'){c.fillStyle='rgba(255,255,255,.18)';circ(c,x,y,R()*3);if(R()<.012){c.fillStyle='rgba(255,255,255,.22)';ell(c,x,y,50,16);ell(c,x+30,y-6,30,12);}}
     else if(d==='shadow'){c.fillStyle='rgba(160,110,255,.12)';circ(c,x,y,R()*2);if(R()<.008){c.strokeStyle='rgba(160,90,255,.3)';c.lineWidth=1.5;c.beginPath();c.arc(x,y,20,0,Math.PI*2);c.stroke();}}
+    else if(d==='sea'){if(R()<.02){c.strokeStyle='rgba(140,220,255,.22)';c.lineWidth=2;c.beginPath();c.arc(x,y,18+R()*30,Math.PI*1.1,Math.PI*1.9);c.stroke();}
+      else{c.fillStyle='rgba(180,240,255,.12)';circ(c,x,y,R()*2.2);}}
     else if(d==='chaos'){c.fillStyle='rgba(255,60,90,.1)';circ(c,x,y,R()*2.5);if(R()<.02){c.strokeStyle='rgba(255,50,80,.35)';c.lineWidth=1.5;c.beginPath();c.moveTo(x,y);c.lineTo(x+R()*30-15,y+R()*30-15);c.stroke();}}
   }
   // 地砖（天城、魔殿、王座）
@@ -943,21 +1051,33 @@ function startLevel(L){
     for(let i=0;i<80;i++){const x=rand(x0,x1),y=rand(90,H-90);if(free(x,y,30)&&hyp(x-180,y-H/2)>260){G.mons.push(mkMon(type,x,y));return;}}
     G.mons.push(mkMon(type,rand(x0,x1),rand(90,H-90)));
   };
-  const ns=8+2*L,nm=1+Math.ceil(L/2);
+  const ns=Math.min(8+2*L,30),nm=1+Math.ceil(L/2);
   for(let i=0;i<ns;i++)place('s',340,W-420);
   for(let i=0;i<nm;i++)place('m',700+i*(900/nm),W-460);
   const b=mkMon('b',W-230,H/2);G.mons.push(b);G.boss=b;
+  if(hasMech('crystal')){for(let i=0;i<3;i++){const a=Math.PI/2+i*Math.PI*2/3;G.mons.push(mkSpecial('c',b.x+Math.cos(a)*175,b.y+Math.sin(a)*175));}}
+  G.burnT=0;G.poisT=0;G.p.poison=0;
   refreshHudStatic();
   showScreen('game');
   if(VH>VW)toast('横过来玩更爽哦');
   tutBegin();
 }
 
+function hasMech(k){return !!(G&&G.lv.mech&&G.lv.mech.includes(k));}
+function mechActive(k){const M=MECH[k];return hasMech(k)&&!(M&&M.charm&&S.charm===M.charm);}
+function mkSpecial(kind,x,y){
+  const i=G.L-1;
+  const m=kind==='c'?{name:'能量水晶',shape:'crystalmon',col:'#5FD8F5',r:22,hp:15,def:DEF_M[i]}:{name:'治疗图腾',shape:'totem',col:'#7A5230',r:16,hp:4,def:DEF_S[i]};
+  return Object.assign({type:kind,x,y,hx:x,hy:y,maxHp:m.hp,atk:0,spd:0,aggro:0,cd:9,acd:9,state:'idle',wt:0,wx:x,wy:y,frz:0,flash:0,lunge:0,
+    anim:rand(0,6),skt:99,cast:0,skn:0,dead:false,respawn:0,summon:true,moving:false,static:true,el:null},m);
+}
 function mkMon(type,x,y,summon){
   const L=G.L,i=L-1,lv=G.lv,spec=lv[type];
-  return {type,name:spec[0],shape:spec[1],col:spec[2],x,y,hx:x,hy:y,
+  const el=type==='b'?(lv.el||null):(lv.els?pick(lv.els):(lv.el||null));
+  const armorK=(lv.mech&&lv.mech.includes('armor'))?1.35:1;
+  return {el,type,name:spec[0],shape:spec[1],col:spec[2],x,y,hx:x,hy:y,
     r:type==='s'?16:type==='m'?26:50,hp:HP_T[type],maxHp:HP_T[type],
-    def:(type==='s'?DEF_S:type==='m'?DEF_M:DEF_B)[i],
+    def:Math.round((type==='s'?DEF_S:type==='m'?DEF_M:DEF_B)[i]*armorK),
     atk:(type==='s'?ATK_S:type==='m'?ATK_M:ATK_B)[i],
     spd:type==='s'?92+L*4:type==='m'?80+L*3:72+L*3,
     aggro:type==='s'?220:type==='m'?260:340,
@@ -1012,19 +1132,36 @@ function ring(x,y,r0,r1,col,dur,w){G.fx.push({k:'ring',x,y,r0,r1,col,t:0,dur,w:w
 
 function nearestMon(x,y,maxd){
   let best=null,bd=maxd;
-  for(const m of G.mons){if(m.dead)continue;const d=hyp(m.x-x,m.y-y)-m.r;if(d<bd){bd=d;best=m;}}
+  const sh=G.mons.some(q=>q.type==='c'&&!q.dead);
+  for(const m of G.mons){if(m.dead)continue;const d=hyp(m.x-x,m.y-y)-m.r;
+    // 自动瞄准：BOSS 有护盾时优先打水晶；有治疗图腾时优先打图腾
+    const pri=d+(m.type==='b'&&sh?260:0)-(m.type==='c'||m.type==='t'?60:0);
+    if(d<maxd&&pri<bd){bd=pri;best=m;}}
   return best;
 }
+function bossShielded(){return G.mons.some(x=>x.type==='c'&&!x.dead);}
 function hitMon(m,mult,crit0){
   if(m.dead)return;
-  const atk=G.st.atk*mult;const crit=crit0||Math.random()<.15;const base=crit?atk*2:atk;
-  const d=Math.max(1,Math.ceil(base*.1),Math.round(base-m.def));
+  if(m.type==='b'&&bossShielded()){m.flash=.06;
+    if(G.t-(G.shTxt||-9)>1.2){G.shTxt=G.t;text(m.x,m.y-m.r-24,'护盾！先打碎能量水晶','#7FE8FF',true);}return;}
+  const em=elemMult(HERO_EL[S.hero],m.el);
+  const atk=G.st.atk*mult*em;const crit=crit0||Math.random()<.15;const base=crit?atk*2:atk;
+  const def=S.charm==='pierce'?m.def*.65:m.def;
+  let d=Math.max(1,Math.ceil(base*(G.L>10?.03:.1)),Math.round(base-def));
+  if(G.L>10)d=Math.min(d,hitCap(m.type,em));
+  if(em!==1&&G.t-(G.elTxt||-9)>.9){G.elTxt=G.t;text(m.x,m.y-m.r-30,em>1?'克制！':'被抵抗…',em>1?'#7CFFB2':'#A8B0C8',em>1);}
+  if(S.charm==='vamp')G.p.hp=Math.min(G.st.maxHp,G.p.hp+G.st.maxHp*.015);
   m.hp-=d;m.flash=.12;
   if(m.state!=='chase')m.state='chase';
   if(m.type!=='b'){const a=Math.atan2(m.y-G.p.y,m.x-G.p.x);m.x+=Math.cos(a)*(m.type==='s'?10:4);m.y+=Math.sin(a)*(m.type==='s'?10:4);}
   text(m.x+rand(-8,8),m.y-m.r-8,(crit?'暴击 ':'')+d,crit?'#FFD23A':'#FFFFFF',crit);
   burst(m.x,m.y,crit?'#FFD23A':'#FFF1D0',crit?8:4,160);
   sfx(crit?'crit':'hit');
+  if(m.type==='b'&&hasMech('shift')&&m.hp>0){
+    const seq=['火','冰','金','暗'],el=seq[Math.min(3,Math.floor((100-m.hp)/25))];
+    if(m.el!==el){m.el=el;text(m.x,m.y-m.r-40,`BOSS 变成「${el}」属性！`,EL_COL[el],true);
+      toast(`BOSS 变成${el}属性，换「${heroNameOfEl(EL_RULE[el].weak)}」克制它`);ring(m.x,m.y,20,m.r*2.5,'rgba(255,255,255,',.5,10);}
+  }
   if(m.hp<=0){m.hp=0;killMon(m);}
 }
 function killMon(m){
@@ -1047,11 +1184,12 @@ function killMon(m){
     if(Math.random()<.5)dropItem(m.x,m.y,makeItem(L,wpick([0,0,40,40,20])));
     G.shake=.6;sfx('win');
     const first=!S.cleared[L];
-    S.cleared[L]=true;S.unlocked=Math.max(S.unlocked,Math.min(10,L+1));
+    S.cleared[L]=true;S.unlocked=Math.max(S.unlocked,Math.min(MAX_LV,L+1));
     G.cleared=true;G.firstClear=first;G.resultT=2.2;
     // 场上剩下的怪继续存在，可以刷
   }
   if(!m.summon&&m.type!=='b')m.respawn=m.type==='s'?25:60;
+  if(m.type==='c'&&!bossShielded()&&!G.boss.dead){text(G.boss.x,G.boss.y-G.boss.r-30,'护盾破了！快打BOSS','#7FE8FF',true);G.shake=.3;}
   save();
 }
 function dropItem(x,y,it){
@@ -1062,6 +1200,7 @@ function hurtPlayer(raw){
   const p=G.p;if(p.shield>0||p.hp<=0||G.dead)return;
   const d=Math.max(1,Math.round(raw-G.st.def));
   p.hp-=d;p.hurt=.25;
+  if(mechActive('poison')){if(!(p.poison>0))text(p.x,p.y-62,'中毒了！','#9CFF7A');p.poison=3;}
   text(p.x+rand(-6,6),p.y-40,'-'+d,'#FF5A4E');
   sfx('hurt');
   if(p.hp<=0){p.hp=0;playerDie();}
@@ -1134,7 +1273,21 @@ function moveTo(m,tx,ty,spd,dt){
 
 function bossSkill(m){
   const L=G.L,list=['slam'];if(L>=3)list.push('volley');if(L>=6)list.push('summon');
+  if(hasMech('heal'))list.splice(1,0,'totem');
+  if(hasMech('blink'))list.push('blink');
   const k=list[m.skn%list.length];m.skn++;
+  if(k==='totem'){
+    if(G.mons.filter(x=>x.type==='t'&&!x.dead).length<2){const a=rand(0,Math.PI*2),r=rand(120,190);
+      const tm=mkSpecial('t',clamp(m.x+Math.cos(a)*r,60,W-60),clamp(m.y+Math.sin(a)*r,60,H-60));G.mons.push(tm);burst(tm.x,tm.y,'#7CE07A',16,160);
+      text(m.x,m.y-m.r-30,'放出治疗图腾！快打掉它','#7CE07A',true);}
+    m.cast=.5;m.skt=Math.max(3.2,5.8-L*.2);return;
+  }
+  if(k==='blink'){
+    burst(m.x,m.y,'#A98AFF',30,260);
+    m.x=clamp(m.hx+rand(-280,280),120,W-120);m.y=clamp(m.hy+rand(-240,240),120,H-120);
+    burst(m.x,m.y,'#A98AFF',30,260);text(m.x,m.y-m.r-30,'瞬移！','#C8A8FF',true);
+    m.cast=.4;m.skt=Math.max(3.2,5.8-L*.2);return;
+  }
   if(k==='slam'){
     const r=150+L*5;G.tele.push({x:m.x,y:m.y,r,t:0,dur:1.05,dmg:m.atk*1.6,src:m});m.cast=1.05;
     if(hyp(G.p.x-m.x,G.p.y-m.y)<r+80)text(G.p.x,G.p.y-70,'红圈！快游出去！','#FF6A5E',true);
@@ -1163,7 +1316,7 @@ function update(dt){
     if(K.has('a')||K.has('arrowleft'))mx-=1;if(K.has('d')||K.has('arrowright'))mx+=1;
     if(K.has('w')||K.has('arrowup'))my-=1;if(K.has('s')||K.has('arrowdown'))my+=1;
     const ml=hyp(mx,my);
-    if(ml>.12){const n=Math.min(1,ml);mx/=ml;my/=ml;p.x+=mx*205*n*dt;p.y+=my*205*n*dt;p.walk+=dt*n;p.moving=true;
+    if(ml>.12){const n=Math.min(1,ml);mx/=ml;my/=ml;const sp=205*(mechActive('cold')?.55:1);p.x+=mx*sp*n*dt;p.y+=my*sp*n*dt;p.walk+=dt*n;p.moving=true;
       if(Math.random()<dt*9)G.fx.push({k:'bub',x:p.x-p.face*FISH_LEN*.45,y:p.y-10+rand(-8,8),r:rand(1.6,3.8),vx:-p.face*14,t:0,dur:1.1});
       if(p.swing<=0){p.ang=Math.atan2(my,mx);if(Math.abs(mx)>.15)p.face=mx>0?1:-1;}}
     else{p.moving=false;p.walk=0;}
@@ -1176,8 +1329,13 @@ function update(dt){
     if(inp.skill){trySkill();inp.skill=false;}
     if(S.auto&&p.hp<G.st.maxHp*.3&&S.potions>0&&G.t-(G.autoPotT||-9)>3){G.autoPotT=G.t;usePotion();}
     // 自然回血 1%/秒；安全营地 12%/秒
-    const regen=hyp(p.x-180,p.y-H/2)<110?.12:.01;
+    const inCamp=hyp(p.x-180,p.y-H/2)<110;
+    const burning=mechActive('burn')&&!inCamp;
+    const regen=inCamp?.12:(burning||p.poison>0)?0:.01;
     if(p.hp<G.st.maxHp)p.hp=Math.min(G.st.maxHp,p.hp+G.st.maxHp*regen*dt);
+    if(burning){p.hp-=G.st.maxHp*.025*dt;G.burnT+=dt;if(G.burnT>1.2){G.burnT=0;text(p.x+rand(-10,10),p.y-52,'灼烧','#FF9A5A');}}
+    if(p.poison>0){p.poison-=dt;p.hp-=G.st.maxHp*.03*dt;G.poisT+=dt;if(G.poisT>1){G.poisT=0;text(p.x+rand(-10,10),p.y-52,'中毒','#9CFF7A');}}
+    if(p.hp<=0&&!G.dead){p.hp=0;playerDie();}
   }
   // 怪物
   for(const m of G.mons){
@@ -1186,6 +1344,7 @@ function update(dt){
       continue;
     }
     m.anim+=dt;m.flash-=dt;m.lunge=Math.max(0,m.lunge-dt);
+    if(m.static){if(m.type==='t'&&!G.boss.dead)G.boss.hp=Math.min(G.boss.maxHp,G.boss.hp+3.5*dt);continue;}
     if(m.frz>0){m.frz-=dt;m.moving=false;continue;}
     m.acd-=dt;
     if(m.volleyT>0){m.volleyT-=dt;if(m.volleyT<=0){const n=10+G.L;for(let i=0;i<n;i++){const a=i/n*Math.PI*2+G.t;G.eproj.push({x:m.x,y:m.y,vx:Math.cos(a)*230,vy:Math.sin(a)*230,life:2.6,r:9,dmg:m.atk*.8});}sfx('boss');}}
@@ -1364,6 +1523,16 @@ function drawGame(t){
       if(m.type!=='s'){c.font=`bold ${m.type==='b'?14:11}px sans-serif`;c.textAlign='center';c.lineWidth=3;c.strokeStyle='#000b';
         const y=m.y-m.r*(m.type==='b'?1.25:1.55)-(m.type==='b'?14:14);
         c.strokeText(m.name,m.x,y);c.fillStyle=m.type==='b'?'#FF6A5E':'#FFC06A';c.fillText(m.name,m.x,y);}
+      if(m.el&&G.L>10){ // 属性小圆标
+        const ey=m.y-m.r*(m.type==='b'?1.25:1.55)-(m.type==='s'?10:34),ex=m.x,er=m.type==='s'?7:10;
+        c.fillStyle='#0009';circ(c,ex,ey,er+2);c.fillStyle=EL_COL[m.el];circ(c,ex,ey,er);
+        c.fillStyle='#1A1020';c.font=`900 ${er*1.3|0}px "Noto Sans SC",sans-serif`;c.textAlign='center';c.textBaseline='middle';c.fillText(m.el,ex,ey+1);c.textBaseline='alphabetic';}
+      if(m.type==='b'&&bossShielded()){
+        c.strokeStyle=`rgba(127,232,255,${.55+Math.sin(t*5)*.2})`;c.lineWidth=4;c.beginPath();c.arc(m.x,m.y,m.r*1.45,0,Math.PI*2);c.stroke();
+        c.fillStyle='rgba(127,232,255,.12)';circ(c,m.x,m.y,m.r*1.45);
+        for(const cm of G.mons)if(cm.type==='c'&&!cm.dead){c.strokeStyle=`rgba(127,232,255,${.4+Math.sin(t*9+cm.x)*.25})`;c.lineWidth=2.5;c.beginPath();c.moveTo(cm.x,cm.y-10);c.lineTo(m.x,m.y);c.stroke();}
+      }
+      if(m.type==='t'&&!G.boss.dead){c.strokeStyle=`rgba(124,224,122,${.45+Math.sin(t*8)*.25})`;c.lineWidth=3;c.beginPath();c.moveTo(m.x,m.y-28);c.lineTo(G.boss.x,G.boss.y);c.stroke();}
     }else{
       if(p.shield>0){c.fillStyle=`rgba(180,160,255,${.25+Math.sin(t*10)*.08})`;circ(c,p.x,p.y-10,62);c.strokeStyle='rgba(255,240,170,.8)';c.lineWidth=2;c.beginPath();c.arc(p.x,p.y-10,62,0,Math.PI*2);c.stroke();}
       const pulse=.5+Math.sin(t*3)*.12;
@@ -1400,6 +1569,16 @@ function drawGame(t){
   }
   c.globalAlpha=1;
   c.restore();
+  // 困难篇环境效果
+  if(mechActive('fog')){
+    const px=(p.x-camX)*ZOOM,py=(p.y-10-camY)*ZOOM,R=210*ZOOM;
+    const g=c.createRadialGradient(px,py,R*.45,px,py,R);g.addColorStop(0,'rgba(6,4,16,0)');g.addColorStop(1,'rgba(6,4,16,.94)');
+    c.fillStyle=g;c.fillRect(0,0,VW,VH);
+  }
+  const edge=(col,a)=>{const g=c.createRadialGradient(VW/2,VH/2,Math.min(VW,VH)*.38,VW/2,VH/2,Math.max(VW,VH)*.72);g.addColorStop(0,col+'0)');g.addColorStop(1,col+a+')');c.fillStyle=g;c.fillRect(0,0,VW,VH);};
+  if(mechActive('burn')&&hyp(p.x-180,p.y-H/2)>=110)edge('rgba(255,110,30,',(.28+Math.sin(t*4)*.08).toFixed(2));
+  if(mechActive('cold'))edge('rgba(170,225,255,',.32);
+  if(p.poison>0)edge('rgba(110,230,90,',(.3+Math.sin(t*6)*.08).toFixed(2));
   // 受伤红边
   if(p.hurt>0){const g=c.createRadialGradient(VW/2,VH/2,Math.min(VW,VH)*.35,VW/2,VH/2,Math.max(VW,VH)*.7);g.addColorStop(0,'rgba(255,0,0,0)');g.addColorStop(1,`rgba(255,0,0,${p.hurt*1.2})`);c.fillStyle=g;c.fillRect(0,0,VW,VH);}
   drawMinimap();
@@ -1415,7 +1594,10 @@ function drawGame(t){
 function guideTarget(){
   const p=G.p,b=G.boss;
   if(G.cleared||G.dead)return null;
-  const rest=G.mons.filter(m=>!m.dead&&m.type!=='b');
+  const near=type=>{let best=null,bd=1e9;for(const m of G.mons){if(m.dead||m.type!==type)continue;const d=hyp(m.x-p.x,m.y-p.y);if(d<bd){bd=d;best=m;}}return best;};
+  if(!b.dead&&bossShielded()&&(b.state==='chase'||G.kills>=6))return near('c');
+  if(!b.dead&&b.state==='chase'){const tt=near('t');if(tt)return tt;}
+  const rest=G.mons.filter(m=>!m.dead&&m.type!=='b'&&!m.static);
   if(!b.dead&&(rest.length===0||b.state==='chase'||G.kills>=Math.max(6,G.mons.length*.6)))return b;
   let best=null,bd=1e9;for(const m of rest){const d=hyp(m.x-p.x,m.y-p.y);if(d<bd){bd=d;best=m;}}
   return best||(!b.dead?b:null);
@@ -1446,7 +1628,8 @@ function drawMinimap(){
   c.fillStyle='rgba(10,12,24,.7)';rr(c,x-3,y-3,w+6,h+6,6);
   c.fillStyle=G.lv.g;c.globalAlpha=.55;c.fillRect(x,y,w,h);c.globalAlpha=1;
   const s=w/W;
-  for(const m of G.mons){if(m.dead)continue;c.fillStyle=m.type==='b'?'#FF3A5A':m.type==='m'?'#FF9A2E':'#FFD6C8';const r=m.type==='b'?3.5:m.type==='m'?2.2:1.3;circ(c,x+m.x*s,y+m.y*s,r);}
+  for(const m of G.mons){if(m.dead)continue;if(mechActive('fog')&&m.type!=='b')continue;
+    c.fillStyle=m.type==='b'?'#FF3A5A':m.type==='m'?'#FF9A2E':m.type==='c'?'#7FE8FF':m.type==='t'?'#7CE07A':'#FFD6C8';const r=m.type==='b'?3.5:m.type==='m'?2.2:1.3;circ(c,x+m.x*s,y+m.y*s,r);}
   for(const d of G.drops){c.fillStyle=RAR[d.it.rar].c;c.fillRect(x+d.x*s-1,y+d.y*s-1,2,2);}
   c.fillStyle='#fff';circ(c,x+G.p.x*s,y+G.p.y*s,2.8);
   c.strokeStyle='rgba(255,255,255,.35)';c.lineWidth=1;c.strokeRect(x+camX*s,y+camY*s,VW/ZOOM*s,VH/ZOOM*s);
@@ -1490,15 +1673,17 @@ function renderMap(){
   $('mapChips').innerHTML=chipsHtml(st,true);
   drawFace($('mapFace'));
   const done=Object.keys(S.cleared).length;
-  $('mapSub').textContent=`已通关 ${done} / 10 · 累计击败 ${S.kills} 只怪物`;
+  $('mapSub').textContent=`已通关 ${done} / ${MAX_LV} · 累计击败 ${S.kills} 只怪物`;
   $('levels').innerHTML=LEVELS.map((lv,i)=>{
-    const L=i+1,lock=L>S.unlocked,ok=!!S.cleared[L],nx=!lock&&!ok;
-    return `<button class="lv ${lock?'locked':''} ${nx?'next':''}" data-lv="${L}" style="--lc:${lv.s[2]}" ${lock?'aria-disabled="true"':''}>
+    const L=i+1,lock=L>S.unlocked,ok=!!S.cleared[L],nx=!lock&&!ok,hard=L>10;
+    const sec=L===1?'<div class="sec">简单篇 · 第 1-10 关</div>':L===11?'<div class="sec hard">困难篇 · 第 11-20 关 <span>要看属性、带护符、想策略</span></div>':'';
+    const info=hard?`<span class="hinfo" style="order:0">${levelEls(L).map(e=>`<i class="elb" style="--ec:${EL_COL[e]}">${e}</i>`).join('')} ${lv.mech.map(k=>MECH[k].n).join(' · ')}</span>`:'';
+    return sec+`<button class="lv ${lock?'locked':''} ${nx?'next':''} ${hard?'hardlv':''}" data-lv="${L}" style="--lc:${lv.s[2]}" ${lock?'aria-disabled="true"':''}>
       <span class="no">第 ${L} 关</span>
-      <span class="nm">${lv.n}</span>
+      <span class="nm">${lv.n}</span>${info}
       <span class="mons">小怪 ${lv.s[0]}<br>中怪 ${lv.m[0]}<br>BOSS ${lv.b[0]}</span>
       <span class="rec">建议 攻${REC_ATK[i]} 防${REC_DEF[i]}</span>
-      ${!lock&&!ok&&(st.atk<REC_ATK[i]*.8||st.def<REC_DEF[i]*.8)?'<span class="weak">实力不够，先去商店「一键买齐」</span>':''}
+      ${!lock&&!ok&&(st.atk<REC_ATK[i]*.8||st.def<REC_DEF[i]*.8)?`<span class="weak">${hard?'实力不够':'实力不够，先去商店「一键买齐」'}</span>`:''}
       <span class="st ${lock?'lock':ok?'ok':'go'}">${lock?'未解锁':ok?'已通关':'可挑战'}</span>
     </button>`;}).join('');
 }
@@ -1506,6 +1691,7 @@ $('levels').addEventListener('click',e=>{
   const b=e.target.closest('[data-lv]');if(!b)return;
   const L=+b.dataset.lv;
   if(L>S.unlocked){toast(`先打败第 ${L-1} 关的 BOSS`);return;}
+  if(L>10){briefLv=L;openModal('brief');return;}
   startLevel(L);
 });
 
@@ -1525,6 +1711,13 @@ function refreshHud(){
   let s=0,m=0,ts=0,tm=0;
   for(const x of G.mons){if(x.summon)continue;if(x.type==='s'){ts++;if(!x.dead)s++;}else if(x.type==='m'){tm++;if(!x.dead)m++;}}
   $('lvProg').textContent=`小怪 ${s}/${ts} · 中怪 ${m}/${tm} · BOSS ${G.boss.dead?'已击败':'存活'}`;
+  if(G.L>10){
+    const hel=HERO_EL[S.hero],els=levelEls(G.L);const bossEl=G.boss.el;
+    const em=elemMult(hel,bossEl);
+    const parts=G.lv.mech.map(k=>{const M=MECH[k];if(!M.charm)return `<span class="mk">${M.n}</span>`;const on=mechActive(k);return `<span class="mk ${on?'bad':'ok'}">${M.n}${on?'':'✓'}</span>`;});
+    $('lvMech').innerHTML=`<span class="mk" style="color:${EL_COL[bossEl]}">BOSS ${bossEl}属性</span><span class="mk ${em>1?'ok':em<1?'bad':''}">你是${hel}${em>1?' 克制':em<1?' 被抵抗':''}</span>`+parts.join('');
+    $('lvMech').hidden=false;
+  }else $('lvMech').hidden=true;
   const b=G.boss,show=!b.dead&&(b.state==='chase'||b.hp<b.maxHp);
   $('bossBar').hidden=!show;
   if(show){$('bossName').textContent=`${b.name}  ${Math.ceil(b.hp)}/100  护甲${b.def}`;$('bossFill').style.width=(b.hp/b.maxHp*100)+'%';}
@@ -1537,7 +1730,7 @@ function refreshHud(){
 }
 
 /* ---------- 弹层 ---------- */
-let modalKind=null,tab='bag',sel=null,shopLv=1,resetArm=false;
+let modalKind=null,tab='bag',sel=null,shopLv=1,resetArm=false,backToBrief=false;
 function openModal(kind){
   modalKind=kind;$('modal').hidden=false;
   if(screen==='game')paused=true;
@@ -1545,7 +1738,7 @@ function openModal(kind){
   renderModal();
 }
 function closeModal(){
-  $('modal').hidden=true;modalKind=null;sel=null;resetArm=false;
+  $('modal').hidden=true;modalKind=null;sel=null;resetArm=false;backToBrief=false;
   if(screen==='game'){
     paused=false;
     if(G){G.st=calcStats();G.p.hp=Math.min(G.p.hp,G.st.maxHp);}
@@ -1580,10 +1773,44 @@ function head(title,tabs){
   return `<div class="sheet-head">${t}<button class="x" data-act="close" aria-label="关闭">×</button></div>`;
 }
 
+let briefLv=11;
+function configCheck(L){
+  const lv=LEVELS[L-1],els=levelEls(L),hel=HERO_EL[S.hero],st=calcStats();
+  const best=els.map(e=>EL_RULE[e].weak);
+  const elOk=els.some(e=>elemMult(hel,e)>1),elBad=els.every(e=>elemMult(hel,e)<1);
+  const needCharms=lv.mech.map(k=>MECH[k].charm).filter(Boolean);
+  const charmOk=needCharms.length===0||needCharms.includes(S.charm);
+  return {els,best,elOk,elBad,needCharms,charmOk,atkOk:st.atk>=REC_ATK[L-1],defOk:st.def>=REC_DEF[L-1],st};
+}
+function briefHtml(){
+  const L=briefLv,lv=LEVELS[L-1],c=configCheck(L);
+  const mark=ok=>ok?'<b class="ok">✓</b>':'<b class="bad">✗</b>';
+  const elRows=c.els.map(e=>`<li><i class="elb" style="--ec:${EL_COL[e]}">${e}</i> 属性怪：怕「${EL_RULE[e].weak}」→ 用 <b>${heroNameOfEl(EL_RULE[e].weak)}</b>，抗「${EL_RULE[e].resist.join('、')}」</li>`).join('');
+  const mechRows=lv.mech.map(k=>{const M=MECH[k],ch=M.charm&&charmDef(M.charm);
+    return `<li><b>${M.n}</b>：${M.d}${ch?` → 戴 <b style="color:${ch.col}">${ch.n}</b> 可以免疫`:''}</li>`;}).join('');
+  const h=heroDef(),ch=S.charm&&charmDef(S.charm);
+  return head(`第 ${L} 关 · ${lv.n}`)+`<div class="sheet-body">
+    <div class="brief">
+      <div><h3>怪物属性</h3><ul class="rules">${elRows}</ul></div>
+      <div><h3>这一关的难点</h3><ul class="rules">${mechRows}</ul></div>
+    </div>
+    <h3>你现在的配置</h3>
+    <div class="cfg">
+      <div>${mark(c.elOk)} 形态：<b>${h.short}</b>（${HERO_EL[S.hero]}属性）${c.elOk?'<span class="ok">克制！</span>':c.elBad?'<span class="bad">被抵抗，伤害减半</span>':'<span class="mid">不克制</span>'}</div>
+      <div>${mark(c.charmOk)} 护符：<b>${ch?ch.n:'没戴'}</b>${c.charmOk?'':` <span class="bad">建议戴：${c.needCharms.map(x=>charmDef(x).n).join(' 或 ')}</span>`}</div>
+      <div>${mark(c.atkOk)} 攻击 ${c.st.atk} / 建议 ${REC_ATK[L-1]}　${mark(c.defOk)} 防御 ${c.st.def} / 建议 ${REC_DEF[L-1]}</div>
+    </div>
+    <p class="note">身上只能戴 1 个护符；有两个难点的关卡，要自己想好先防哪个，另一个靠药水、营地回血或者打法来应付。</p>
+    <div class="row" style="justify-content:center">
+      <button class="btn" data-act="go">${c.elOk&&c.charmOk?'开始挑战':'就这样开始挑战'}</button>
+      <button class="btn ghost" data-act="toHero">换形态</button>
+      <button class="btn ghost" data-act="toCharm">买 / 换护符</button>
+    </div></div>`;
+}
 function renderModal(){
   const sh=$('sheet');let h='';
   if(modalKind==='panel'){
-    h=head('',true)+`<div class="sheet-body">${tab==='bag'?bagHtml():tab==='shop'?shopHtml():heroHtml()}</div>`;
+    h=head('',true)+`<div class="sheet-body">${backToBrief?`<button class="btn sm" data-act="backBrief">← 配好了，回到第 ${briefLv} 关情报</button>`:''}${tab==='bag'?bagHtml():tab==='shop'?shopHtml():heroHtml()}</div>`;
   }else if(modalKind==='menu'){
     h=head('暂停')+`<div class="sheet-body center">
       <p class="big-title">暂停中</p>
@@ -1598,6 +1825,8 @@ function renderModal(){
     h=head('游戏规则')+`<div class="sheet-body">${rulesHtml()}</div>`;
   }else if(modalKind==='result'){
     h=resultHtml();
+  }else if(modalKind==='brief'){
+    h=briefHtml();
   }
   sh.innerHTML=h;
   sh.querySelectorAll('canvas[data-hero]').forEach(cn=>{const c=cn.getContext('2d');drawMarlin(c,cn.dataset.hero,cn.width/2,cn.height/2,cn.width*.94,1,.3,0,0,0);});
@@ -1637,7 +1866,13 @@ function shopHtml(){
     <div class="acts"><button class="btn sm" data-act="potion" ${S.points<POTION_PRICE||S.potions>=POTION_MAX?'disabled':''}>购买 ${POTION_PRICE} 积分</button></div></div>`;
   h+=`<div class="detail"><div><div class="dn">一键买齐</div><div class="dm">自动买下能买得起的最好装备，并直接穿上</div></div>
     <div class="acts"><button class="btn sm" data-act="buyBest">一键买齐</button></div></div>`;
-  h+=`<div class="row"><h3>装备等级</h3>${Array.from({length:S.unlocked},(_,i)=>`<button class="tab ${shopLv===i+1?'act':''}" data-slv="${i+1}">Lv${i+1}</button>`).join('')}</div>`;
+  h+=`<h3 id="charmSec">护符（困难篇必备 · 用金币买，身上只能戴 1 个）</h3><div class="charms">${CHARMS.map(cd=>{
+      const own=S.charms.includes(cd.id),on=S.charm===cd.id;
+      const btn=on?`<button class="btn sm ghost" data-act="wearCharm" data-id="${cd.id}">摘下</button>`:own?`<button class="btn sm" data-act="wearCharm" data-id="${cd.id}">戴上</button>`
+        :`<button class="btn sm" data-act="buyCharm" data-id="${cd.id}" ${S.gold<cd.price?'disabled':''}>${cd.price} 金币</button>`;
+      return `<div class="charm ${on?'on':''}" style="--cc:${cd.col}"><span class="cdot"></span><div><b>${cd.n}</b><span>${cd.d}</span></div>${btn}</div>`;}).join('')}</div>
+    <p class="note">金币靠卖装备得到（背包里「卖掉所有普通、精良」）。现在金币：${fmt(S.gold)}</p>`;
+  h+=`<div class="row"><h3>装备等级</h3>${Array.from({length:Math.min(5,S.unlocked)},(_,i)=>{const v=S.unlocked-Math.min(5,S.unlocked)+1+i;return `<button class="tab ${shopLv===v?'act':''}" data-slv="${v}">Lv${v}</button>`;}).join('')}</div>`;
   h+=detailHtml();
   const items=[];
   for(const k of SLOT_KEYS)for(let r=0;r<3;r++){const it=makeItem(shopLv,r,k);it.sk=`${k}-${r}`;items.push(it);}
@@ -1652,7 +1887,7 @@ function heroHtml(){
     const btn=cur?`<button class="btn sm" disabled>出战中</button>`:own?`<button class="btn sm" data-act="pickHero" data-id="${hd.id}">出战</button>`
       :`<button class="btn sm" data-act="buyHero" data-id="${hd.id}" ${S.gold<hd.price?'disabled':''}>${hd.price} 金币解锁</button>`;
     h+=`<div class="hc ${cur?'cur':''}"><canvas width="192" height="128" data-hero="${hd.id}"></canvas><div>
-      <div class="hn">${hd.short||hd.n}</div>
+      <div class="hn">${hd.short||hd.n} <i class="elb" style="--ec:${EL_COL[HERO_EL[hd.id]]}">${HERO_EL[hd.id]}</i></div>
       <div class="hs">${hd.desc}<br>攻 <b>${hd.atk}</b> · 防 <b>${hd.def}</b> · 血 <b>${hd.hp}</b>${hd.ranged?' · <b>远程</b>':' · 近战'}<br>技能【${hd.sk}】${hd.sd}，冷却 ${hd.cd} 秒</div>
       <div style="margin-top:6px">${btn}</div></div></div>`;
   }
@@ -1667,6 +1902,12 @@ function rulesHtml(){
     <li><b>装备</b>：武器、戒指加攻击，头盔、铠甲加防御。怪物死掉会随机爆装备，可以穿上，也可以卖成金币。金币用来解锁新英雄。</li>
     <li><b>吸收血量</b>：打败怪物后，它的血量会变成你的血量上限加成，越打越厚！</li>
     <li><b>十关挑战</b>：一共 10 关，打败本关大BOSS 就能解锁下一关。打过的关卡可以回去刷怪、刷装备。</li>
+  </ol>
+  <h3>困难篇（第 11-20 关）</h3>
+  <ol class="rules">
+    <li><b>属性克制</b>：怪物有火、冰、金、暗、龙属性，五种马林鱼也各有属性（大马林鱼=火、雷霆=雷、寒冰=冰、星辰=光、龙魂=龙）。困难篇的 BOSS 和中怪有「霸体」：每一下最多只能打掉一点点血，只有属性克制时才打得快，被抵抗时几乎打不动。</li>
+    <li><b>护符</b>：灼烧、寒冷、厚甲、黑雾、中毒各有一种护符能挡住，用金币在商店买，身上只能戴 1 个。</li>
+    <li><b>BOSS 机制</b>：有的 BOSS 有水晶护盾、会放治疗图腾、会瞬移，第 20 关 BOSS 打到一半还会换属性。点关卡会先看到「关卡情报」。</li>
   </ol>
   <h3>怎么操作</h3>
   <ol class="rules">
@@ -1689,8 +1930,8 @@ function resultHtml(){
       <p class="note">建议：去商店买装备、穿上更好的装备，或者用金币解锁更强的英雄。本关建议 攻击 ${REC_ATK[G.L-1]}、防御 ${REC_DEF[G.L-1]}，你现在 攻击 ${G.st.atk}、防御 ${G.st.def}。</p>
       <div class="row" style="justify-content:center"><button class="btn" data-act="retry">再次挑战</button><button class="btn ghost" data-act="toMap">返回地图</button><button class="btn ghost" data-act="shopNow">去商店</button></div></div>`;
   }
-  const L=G.L,last=L===10;
-  const title=last&&G.firstClear?'牛牛通关全部十关！':`第 ${L} 关 · ${G.lv.n} 通关！`;
+  const L=G.L,last=L===MAX_LV;
+  const title=last&&G.firstClear?'牛牛通关全部 20 关！':L===10&&G.firstClear?'简单篇通关！':`第 ${L} 关 · ${G.lv.n} 通关！`;
   return `<div class="sheet-body center" style="padding-top:18px">
     <div class="likes" aria-label="牛牛给你点赞">
       <img class="like-face" alt="牛牛" src="${photoSrc()}">
@@ -1699,7 +1940,7 @@ function resultHtml(){
     </div>
     <p class="like-text">牛牛给你点赞！</p>
     <p class="big-title">${title}</p>
-    ${last&&G.firstClear?'<p>牛牛打败了混沌魔王，是真正的最强勇者！</p>':G.firstClear&&!last?`<p>第 ${L+1} 关「${LEVELS[L].n}」已解锁</p>`:''}
+    ${last&&G.firstClear?'<p>牛牛打败了混沌魔王，是真正的最强勇者！</p>':L===10&&G.firstClear?'<p>困难篇（第 11-20 关）已解锁！后面要看属性、带护符才能过，先去攒金币吧。</p>':G.firstClear&&!last?`<p>第 ${L+1} 关「${LEVELS[L].n}」已解锁</p>`:''}
     <div class="statgrid">
       <div class="sg"><b>${G.kills}</b><span>击败怪物</span></div>
       <div class="sg"><b style="color:var(--gold2)">+${G.gainPts}</b><span>获得积分</span></div>
@@ -1708,7 +1949,7 @@ function resultHtml(){
     </div>
     <p class="note">BOSS 爆出的装备还在地上，记得去捡！</p>
     <div class="row" style="justify-content:center">
-      ${!last?`<button class="btn" data-act="next">进入第 ${L+1} 关</button>`:''}
+      ${!last?`<button class="btn" data-act="next">${L+1>10?`看第 ${L+1} 关情报`:`进入第 ${L+1} 关`}</button>`:''}
       <button class="btn ghost" data-act="stay">继续刷怪</button>
       <button class="btn ghost" data-act="toMap">返回地图</button>
     </div></div>`;
@@ -1724,11 +1965,20 @@ $('sheet').addEventListener('click',e=>{
   if(d.slv){shopLv=+d.slv;sel=null;renderModal();return;}
   switch(d.act){
     case 'close':closeModal();break;
+    case 'go':{$('modal').hidden=true;modalKind=null;startLevel(briefLv);break;}
+    case 'toHero':tab='hero';sel=null;modalKind='panel';backToBrief=screen==='map';renderModal();break;
+    case 'toCharm':tab='shop';sel=null;modalKind='panel';backToBrief=screen==='map';renderModal();setTimeout(()=>{const e=document.getElementById('charmSec');e&&e.scrollIntoView({block:'start'});},30);break;
+    case 'backBrief':modalKind='brief';backToBrief=false;renderModal();break;
+    case 'buyCharm':{const cd=charmDef(d.id);if(!cd||S.gold<cd.price||S.charms.includes(cd.id))break;
+      S.gold-=cd.price;S.charms.push(cd.id);S.charm=cd.id;sfx('win');toast(`买到并戴上了 ${cd.n}`);afterChange();break;}
+    case 'wearCharm':S.charm=S.charm===d.id?null:d.id;sfx('buy');toast(S.charm?`戴上了 ${charmDef(d.id).n}`:'摘下了护符');afterChange();break;
     case 'rules':modalKind='rules';renderModal();break;
     case 'mute':S.muted=!S.muted;save();renderModal();break;
     case 'quit':case 'toMap':$('modal').hidden=true;modalKind=null;paused=false;G=null;save();showScreen('map');break;
     case 'retry':{const L=G.L;$('modal').hidden=true;modalKind=null;paused=false;startLevel(L);break;}
-    case 'next':{const L=G.L+1;$('modal').hidden=true;modalKind=null;paused=false;startLevel(L);break;}
+    case 'next':{const L=G.L+1;
+      if(L>10){G=null;paused=false;showScreen('map');briefLv=L;modalKind='brief';renderModal();$('modal').hidden=false;break;}
+      $('modal').hidden=true;modalKind=null;paused=false;startLevel(L);break;}
     case 'stay':G.resultT=-1;closeModal();break;
     case 'shopNow':$('modal').hidden=true;G=null;paused=false;showScreen('map');openPanel('shop');break;
     case 'equip':{
@@ -1817,7 +2067,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 
 /* ================= 启动 ================= */
-window.__yz={get G(){return G;},get S(){return S;},startLevel,openPanel,showScreen,update:dt=>update(dt),makeItem,buyPrice,sellPrice,calcStats,HEROES,skill:()=>{inp.skill=true;},potion:()=>usePotion(),save,switchHero,exitToMap:()=>{G=null;paused=false;showScreen('map');}};
+window.__yz={HERO_EL,EL_RULE,LEVELS,CHARMS,MECH,levelEls,elemMult,bossShielded:()=>bossShielded(),get G(){return G;},get S(){return S;},startLevel,openPanel,showScreen,update:dt=>update(dt),makeItem,buyPrice,sellPrice,calcStats,HEROES,skill:()=>{inp.skill=true;},potion:()=>usePotion(),save,switchHero,exitToMap:()=>{G=null;paused=false;showScreen('map');}};
 function boot(data){
   if(!MARLIN.ready)MARLIN.img.addEventListener('load',()=>{drawFace($('mapFace'));drawFace($('hudFace'));});
   if(data&&data.save)S=Object.assign(freshSave(),data.save);
